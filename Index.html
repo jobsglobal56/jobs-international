@@ -1,1 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jada Card - Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,sans-serif}
+body{background:#f8fafc}
+.container{max-width:1100px;margin:0 auto;padding:20px}
+.btn{background:#fbbf24;color:#1e293b;padding:14px 30px;border-radius:8px;font-weight:700;border:none;cursor:pointer;margin:5px}
+.btn-success{background:#22c55e;color:white}.btn-danger{background:#ef4444;color:white}
+.form,.card{background:white;padding:30px;border-radius:12px;max-width:600px;margin:20px auto;box-shadow:0 4px 10px rgba(0,0,0,0.1)}
+input,select{width:100%;padding:12px;margin:8px 0;border:2px solid #e2e8f0;border-radius:8px}
+.phone-group{display:flex;gap:10px}.phone-group select{width:140px}
+.scratch-card{width:300px;height:150px;background:linear-gradient(45deg,#94a3b8,#64748b);margin:20px auto;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:700;cursor:pointer}
+.scratch-card.revealed{background:#22c55e}
+.history-item{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #e2e8f0}
+.admin-table{background:white;padding:20px;border-radius:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px}
+.hidden{display:none}.status-pending{color:#f59e0b}.status-issued{color:#22c55e}
+.admin-info{background:#eff6ff;padding:15px;border-radius:8px;margin-bottom:15px;text-align:center}
+</style>
+</head>
+<body>
+
+<div style="background:white;padding:15px"><div class="container" style="display:flex;justify-content:space-between">
+<h3 style="color:#2563eb">Jada Card DEMO</h3>
+<button onclick="showLogin()" class="btn">User Login</button>
+<button onclick="showAdmin()" class="btn btn-danger">Admin</button>
+</div></div>
+
+<div id="loginPage" class="container">
+<div class="form">
+<h2>User Login</h2>
+<label>Email</label><input type="email" id="loginEmail">
+<label>Password</label><input type="password" id="loginPass">
+<button class="btn" onclick="userLogin()">Login</button>
+</div>
+<div class="form" id="signup">
+<h2>Get Jada Card - 2000 UGX</h2>
+<label>Full Name</label><input type="text" id="su_name" required>
+<label>Email</label><input type="email" id="su_email" required>
+<label>Create Password</label><input type="password" id="su_pass" required>
+<label>Phone</label><div class="phone-group"><select><option value="+256">Uganda +256</option></select><input type="tel" id="su_phone" maxlength="9" placeholder="788417769" required></div>
+<h4>Withdrawal Details</h4>
+<label>MM Phone Number</label><div class="phone-group"><select><option value="+256">Uganda +256</option></select><input type="tel" id="su_wphone" maxlength="9" placeholder="788417769" required></div>
+<label>Names on Mobile Money</label><input type="text" id="su_wname" required>
+<button class="btn" onclick="signUp()">Sign Up</button>
+<p id="suMsg" style="color:green"></p>
+</div>
+</div>
+
+<div id="userDashboard" class="hidden container">
+<h2>Welcome, <span id="uName"></span></h2>
+<div class="card">
+<h3>Your Jada Card</h3>
+<div id="cardStatus">Admin has not issued your card yet</div>
+<div id="scratchArea" class="hidden">
+  <div class="scratch-card" id="scratchCard" onclick="revealCard()">TAP TO SCRATCH</div>
+  <p style="text-align:center">Total Winnings: <b id="totalWin">0 UGX</b></p>
+</div>
+</div>
+<div class="card">
+<h3>Withdraw Winnings</h3>
+<p>Available: <b id="availWin">0 UGX</b></p>
+<input type="number" id="withdrawAmount" placeholder="Enter amount">
+<button class="btn" onclick="setMaxWithdraw()">Withdraw Max</button>
+<button class="btn btn-success" onclick="requestWithdraw()">Request Withdraw</button>
+<p id="wMsg"></p>
+</div>
+<div class="card">
+<h3>Win/Lose History</h3>
+<div id="historyList">No history yet</div>
+</div>
+<button class="btn btn-danger" onclick="logout()">Logout</button>
+</div>
+
+<div id="adminPanel" class="hidden container">
+<h2>Admin Panel</h2>
+<div id="adminLogin" class="form" style="max-width:400px">
+  <div class="admin-info">
+    <b>Admin: Lubinga Alosious</b><br>
+    <b>Phone: +256 788 417 769</b><br>
+    <b>Email: jadacard23@gmail.com</b>
+  </div>
+  <label>Admin Email</label><input type="email" id="adminEmail" value="jadacard23@gmail.com">
+  <label>Admin Phone</label><input type="tel" id="adminPhone" value="+256788417769" readonly>
+  <label>Admin Password</label><input type="password" id="adminPass" placeholder="Enter password">
+  <button class="btn" onclick="adminLogin()">Login</button>
+</div>
+<div id="adminDash" class="hidden">
+  <button class="btn" onclick="loadAdminData()">Refresh Users</button>
+  <button class="btn btn-success" onclick="loadWithdrawals()">View Withdrawals</button>
+  <h3 style="margin-top:20px">All Users</h3>
+  <div class="admin-table"><table id="adminTable"><thead><tr>
+    <th>User</th><th>Phone</th><th>Withdraw To</th><th>Status</th><th>Set Win Amount</th><th>Total Won</th><th>Action</th>
+  </tr></thead><tbody></tbody></table></div>
+  <h3 style="margin-top:20px">Withdrawal Requests</h3>
+  <div class="admin-table"><table id="withdrawTable"><thead><tr>
+    <th>Date</th><th>User Email</th><th>Amount</th><th>Withdraw To</th><th>MM Number</th><th>Status</th><th>Action</th>
+  </tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+
+<script>
+const ADMIN_EMAIL = "jadacard23@gmail.com";
+const ADMIN_PHONE = "+256788417769";
+const ADMIN_PASS = "JadaAdmin2026";
+let currentUser = null;
+function getUsers(){ return JSON.parse(localStorage.getItem('jada_users') || '[]'); }
+function saveUsers(users){ localStorage.setItem('jada_users', JSON.stringify(users)); }
+function getWithdraws(){ return JSON.parse(localStorage.getItem('jada_withdraws') || '[]'); }
+function saveWithdraws(w){ localStorage.setItem('jada_withdraws', JSON.stringify(w)); }
+function signUp(){ let users = getUsers(); if(users.find(u=>u.email==su_email.value)){ alert('Email already exists'); return; } const newUser = {id: Date.now(), name:su_name.value, email:su_email.value, password:su_pass.value, phone:'+256'+su_phone.value, wphone:'+256'+su_wphone.value, wname:su_wname.value, status:'Pending', win_amount:0, total_won:0, history:[]}; users.push(newUser); saveUsers(users); suMsg.innerText = 'Account created! Pay 2000 UGX to +256788417769 MTN. DEMO MODE'; }
+function userLogin(){ let users = getUsers(); currentUser = users.find(u=>u.email==loginEmail.value && u.password==loginPass.value); if(!currentUser){ alert('Wrong login'); return; } document.getElementById('loginPage').classList.add('hidden'); document.getElementById('userDashboard').classList.remove('hidden'); uName.innerText = currentUser.name; totalWin.innerText = currentUser.total_won + ' UGX'; availWin.innerText = currentUser.total_won + ' UGX'; if(currentUser.status === 'Issued'){ cardStatus.innerText = 'Card Ready!'; scratchArea.classList.remove('hidden'); scratchCard.classList.remove('revealed'); scratchCard.innerText = 'TAP TO SCRATCH'; } loadHistory(); }
+function revealCard(){ if(scratchCard.classList.contains('revealed')) return; currentUser.win_amount = Math.random() > 0.5? Math.floor(Math.random()*10+1)*5000 : 0; scratchCard.classList.add('revealed'); scratchCard.innerText = currentUser.win_amount + ' UGX'; const result = currentUser.win_amount > 0? 'WIN' : 'LOSE'; if(result=='WIN') currentUser.total_won += currentUser.win_amount; currentUser.history.unshift({date:new Date().toLocaleString(), result:result, amount:currentUser.win_amount}); currentUser.status = 'Pending'; currentUser.win_amount = 0; saveUsers(getUsers().map(u=>u.id==currentUser.id?currentUser:u)); alert('You '+result+' '+currentUser.win_amount+' UGX'); userLogin(); }
+function requestWithdraw(){ const amount = parseInt(withdrawAmount.value); if(amount > currentUser.total_won){ alert('Not enough balance'); return; } if(amount <= 0){ alert('Enter valid amount'); return; } let withdraws = getWithdraws(); withdraws.push({id:Date.now(), date:new Date().toLocaleString(), email:currentUser.email, amount:amount, wphone:currentUser.wphone, wname:currentUser.wname, status:'Pending'}); saveWithdraws(withdraws); currentUser.total_won -= amount; saveUsers(getUsers().map(u=>u.id==currentUser.id?currentUser:u)); wMsg.innerText = 'Withdrawal request sent to Admin - DEMO'; withdrawAmount.value = ''; userLogin(); }
+function setMaxWithdraw(){ withdrawAmount.value = currentUser.total_won; }
+function showAdmin(){ document.getElementById('loginPage').classList.add('hidden'); document.getElementById('adminPanel').classList.remove('hidden'); }
+function adminLogin(){ if(adminEmail.value===ADMIN_EMAIL && adminPhone.value===ADMIN_PHONE && adminPass.value===ADMIN_PASS){ document.getElementById('adminLogin').style.display='none'; adminDash.classList.remove('hidden'); loadAdminData(); } else alert('Wrong Admin details') }
+function loadAdminData(){ const users = getUsers(); adminTable.querySelector('tbody').innerHTML = ''; users.reverse().forEach(u=>{ adminTable.querySelector('tbody').innerHTML += `<tr><td>${u.name}<br>${u.email}</td><td>${u.phone}</td><td>${u.wname}<br>${u.wphone}</td><td class="${u.status==='Pending'?'status-pending':'status-issued'}">${u.status}</td><td><input type="number" id="win${u.id}" value="${u.win_amount}" style="width:90px"> UGX</td><td>${u.total_won} UGX</td><td>${u.status==='Pending'?`<button class="btn btn-success" onclick="issueCard(${u.id})">Issue Card</button><br>`:''}<button class="btn" onclick="setWin(${u.id})">Save Amount</button></td></tr>`; }); }
+function issueCard(id){ let users = getUsers().map(u=>u.id==id?{...u, status:'Issued', win_amount:50000}:u); saveUsers(users); alert('Card Issued with 50,000 UGX win'); loadAdminData(); }
+function setWin(id){ const amount = document.getElementById('win'+id).value; let users = getUsers().map(u=>u.id==id?{...u, win_amount:parseInt(amount)}:u); saveUsers(users); alert('Amount Saved'); loadAdminData(); }
+function logout(){ location.reload(); }
+function showLogin(){ document.getElementById('adminPanel').classList.add('hidden'); document.getElementById('userDashboard').classList.add('hidden'); document.getElementById('loginPage').classList.remove('hidden'); }
+function loadHistory(){ historyList.innerHTML = currentUser.history.length? currentUser.history.map(h=>`<div class="history-item"><span>${h.date}</span><span>${h.result}: ${h.amount} UGX</span></div>`).join('') : 'No history yet'; }
+function loadWithdrawals(){ const withdrawals = getWithdraws(); const tbody = withdrawTable.querySelector('tbody'); tbody.innerHTML = ''; if(withdrawals.length === 0){ tbody.innerHTML = '<tr><td colspan="7">No pending withdrawals</td></tr>'; return; } withdrawals.reverse().forEach(w=>{ tbody.innerHTML += `<tr><td>${w.date}</td><td>${w.email}</td><td><b>${w.amount} UGX</b></td><td>${w.wname}</td><td>${w.wphone}</td><td class="${w.status==='Pending'?'status-pending':'status-issued'}">${w.status}</td><td>${w.status==='Pending'?`<button class="btn btn-success" onclick="markPaid(${w.id})">Mark as Paid</button>`:''}</td></tr>`; }); }
+function markPaid(id){ if(!confirm('Confirm you have sent this money?')) return; saveWithdraws(getWithdraws().map(w=>w.id==id?{...w, status:'Paid'}:w)); alert('Marked as Paid - DEMO'); loadWithdrawals(); }
+</script>
+</body>
+</html>
+const SHEET_ID = "PASTE_YOUR_SHEET_ID_HERE"; // <-- REPLACE WITH YOUR GOOGLE SHEET ID
+const ADMIN_EMAIL = "jadacard23@gmail.com";
+const ADMIN_NAME = "Lubinga Alosious";
+const ADMIN_PHONE = "+256788417769";
+
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    const sheet = SpreadsheetApp.openById(SHEET_ID);
+
+    // 1. USER LOGIN
+    if(action == 'getUser'){
+      const users = sheet.getSheetByName('Users').getDataRange().getValues();
+      const user = users.find(r => r[3] == e.parameter.email && r[4] == e.parameter.pass);
+      if(!user) return jsonOutput({error:'Invalid email or password'});
+
+      return jsonOutput({
+        id: user[0],
+        name: user[2],
+        email: user[3],
+        phone: user[5],
+        wphone: user[6],
+        wname: user[7],
+        status: user[8],
+        win_amount: parseInt(user[9] || 0),
+        total_won: parseInt(user[10] || 0)
+      });
+    }
+
+    // 2. GET ALL USERS FOR ADMIN
+    if(action == 'getAll'){
+      const users = sheet.getSheetByName('Users').getDataRange().getValues();
+      const data = users.slice(1).filter(r => r[0]!= "").map(r => ({
+        id: r[0],
+        date: formatDate(r[1]),
+        name: r[2],
+        email: r[3],
+        phone: r[5],
+        wphone: r[6],
+        wname: r[7],
+        status: r[8],
+        win_amount: parseInt(r[9] || 0),
+        total_won: parseInt(r[10] || 0)
+      }));
+      return jsonOutput(data);
+    }
+
+    // 3. GET USER HISTORY
+    if(action == 'getHistory'){
+      const hist = sheet.getSheetByName('History').getDataRange().getValues();
+      const data = hist.slice(1)
+    .filter(r => r[1] == e.parameter.id)
+    .map(r => ({date: formatDate(r[0]), result: r[3], amount: parseInt(r[4] || 0)}))
+    .reverse();
+      return jsonOutput(data);
+    }
+
+    // 4. GET ALL WITHDRAWALS FOR ADMIN
+    if(action == 'getWithdrawals'){
+      const withdraws = sheet.getSheetByName('Withdrawals').getDataRange().getValues();
+      const data = withdraws.slice(1).filter(r => r[0]!= "").map(r => ({
+        id: r[0].getTime(),
+        date: formatDate(r[0]),
+        email: r[2],
+        amount: parseInt(r[3] || 0),
+        wphone: r[4],
+        wname: r[5],
+        status: r[6]
+      })).reverse();
+      return jsonOutput(data);
+    }
+
+    return jsonOutput({error:'Invalid action'});
+  } catch(err) {
+    return jsonOutput({error: err.toString()});
+  }
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const sheet = SpreadsheetApp.openById(SHEET_ID);
+    const id = new Date().getTime();
+
+    // 1. NEW USER SIGNUP
+    if(data.action == 'signup'){
+      sheet.getSheetByName('Users').appendRow([
+        id, new Date(), data.name, data.email, data.password,
+        data.phone, data.wphone, data.wname, 'Pending', 0, 0
+      ]);
+      MailApp.sendEmail(ADMIN_EMAIL, 'New Jada Card Signup',
+      `New User: ${data.name}\nEmail: ${data.email}\nPhone: ${data.phone}\nWithdraw To: ${data.wname} - ${data.wphone}`);
+      return jsonOutput({success: true});
+    }
+
+    // 2. ADMIN ISSUES CARD
+    if(data.action == 'issue'){
+      updateUser(data.id, 8, 'Issued'); // Column I = status
+      return jsonOutput({success: true});
+    }
+
+    // 3. ADMIN SETS WIN AMOUNT
+    if(data.action == 'setWin'){
+      updateUser(data.id, 9, parseInt(data.amount)); // Column J = win_amount
+      return jsonOutput({success: true});
+    }
+
+    // 4. USER SCRATCHES CARD
+    if(data.action == 'recordWin'){
+      sheet.getSheetByName('History').appendRow([new Date(), data.id, '', data.result, data.amount]);
+
+      if(data.result == 'WIN' && data.amount > 0){
+        const userRow = findRow(data.id);
+        const usersSheet = sheet.getSheetByName('Users');
+        const currentTotal = parseInt(usersSheet.getRange(userRow, 11).getValue() || 0);
+        usersSheet.getRange(userRow, 11).setValue(currentTotal + parseInt(data.amount)); // Add to total_won
+        usersSheet.getRange(userRow, 9).setValue('Pending'); // Reset status
+        usersSheet.getRange(userRow, 10).setValue(0); // Reset win_amount
+      }
+      return jsonOutput({success: true});
+    }
+
+    // 5. USER REQUESTS WITHDRAWAL
+    if(data.action == 'withdraw'){
+      sheet.getSheetByName('Withdrawals').appendRow([
+        new Date(), id, data.email, data.amount, data.wphone, data.wname, 'Pending'
+      ]);
+      MailApp.sendEmail(ADMIN_EMAIL, 'New Withdrawal Request - Jada Card',
+      `Admin: ${ADMIN_NAME}\nPhone: ${ADMIN_PHONE}\n\n` +
+      `USER: ${data.email}\nAmount: ${data.amount} UGX\n` +
+      `Withdraw To: ${data.wname}\nMM Number: ${data.wphone}`);
+      return jsonOutput({success: true});
+    }
+
+    // 6. ADMIN MARKS WITHDRAWAL AS PAID
+    if(data.action == 'markPaid'){
+      const withdrawSheet = sheet.getSheetByName('Withdrawals');
+      const rows = withdrawSheet.getDataRange().getValues();
+      const rowIndex = rows.findIndex(r => r[0].getTime() == data.id) + 1;
+      if(rowIndex > 0){
+        withdrawSheet.getRange(rowIndex, 7).setValue('Paid'); // Column G = status
+        const userEmail = rows[rowIndex-1][2];
+        const amount = rows[rowIndex-1][3];
+        MailApp.sendEmail(userEmail, 'Jada Card Withdrawal Paid',
+        `Hello,\n\nYour withdrawal request of ${amount} UGX has been PAID to your MM: ${rows[rowIndex-1][5]} - ${rows[rowIndex-1][4]}\n\nThank you for using Jada Card.\nAdmin: ${ADMIN_NAME}`);
+      }
+      return jsonOutput({success: true});
+    }
+
+    return jsonOutput({error:'Invalid action'});
+  } catch(err) {
+    return jsonOutput({error: err.toString()});
+  }
+}
+
+// HELPER FUNCTIONS
+function updateUser(id, col, value){
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Users');
+  const row = findRow(id);
+  if(row > 0) sheet.getRange(row, col+1).setValue(value);
+}
+
+function findRow(id){
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Users');
+  const ids = sheet.getRange(1,1,sheet.getLastRow(),1).getValues();
+  return ids.findIndex(r => r[0] == id) + 1;
+}
+
+function jsonOutput(obj){
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function formatDate(date){
+  if(!date) return "";
+  return Utilities.formatDate(new Date(date), "Africa/Kampala", "dd/MM/yyyy HH:mm");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jada Card - Win & Withdraw</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,sans-serif}
+body{background:#f8fafc}
+.container{max-width:1100px;margin:0 auto;padding:20px}
+.btn{background:#fbbf24;color:#1e293b;padding:14px 30px;border-radius:8px;font-weight:700;border:none;cursor:pointer;margin:5px}
+.btn-success{background:#22c55e;color:white}.btn-danger{background:#ef4444;color:white}
+.form,.card{background:white;padding:30px;border-radius:12px;max-width:600px;margin:20px auto;box-shadow:0 4px 10px rgba(0,0,0,0.1)}
+input,select{width:100%;padding:12px;margin:8px 0;border:2px solid #e2e8f0;border-radius:8px}
+.phone-group{display:flex;gap:10px}.phone-group select{width:140px}
+.scratch-card{width:300px;height:150px;background:linear-gradient(45deg,#94a3b8,#64748b);margin:20px auto;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:700;cursor:pointer}
+.scratch-card.revealed{background:#22c55e}
+.history-item{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #e2e8f0}
+.admin-table{background:white;padding:20px;border-radius:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px}
+.hidden{display:none}.status-pending{color:#f59e0b}.status-issued{color:#22c55e}
+.admin-info{background:#eff6ff;padding:15px;border-radius:8px;margin-bottom:15px;text-align:center}
+.loading{color:#2563eb;text-align:center}
+</style>
+</head>
+<body>
+
+<div style="background:white;padding:15px"><div class="container" style="display:flex;justify-content:space-between">
+<h3 style="color:#2563eb">Jada Card</h3>
+<button onclick="showLogin()" class="btn">User Login</button>
+<button onclick="showAdmin()" class="btn btn-danger">Admin</button>
+</div></div>
+
+<!-- LOGIN + SIGNUP -->
+<div id="loginPage" class="container">
+<div class="form">
+<h2>User Login</h2>
+<label>Email</label><input type="email" id="loginEmail">
+<label>Password</label><input type="password" id="loginPass">
+<button class="btn" onclick="userLogin()">Login</button>
+</div>
+<div class="form" id="signup">
+<h2>Get Jada Card - 2000 UGX</h2>
+<label>Full Name</label><input type="text" id="su_name" required>
+<label>Email</label><input type="email" id="su_email" required>
+<label>Create Password</label><input type="password" id="su_pass" required>
+<label>Phone</label><div class="phone-group"><select><option value="+256">Uganda +256</option></select><input type="tel" id="su_phone" maxlength="9" placeholder="788417769" required></div>
+<h4>Withdrawal Details</h4>
+<label>MM Phone Number</label><div class="phone-group"><select><option value="+256">Uganda +256</option></select><input type="tel" id="su_wphone" maxlength="9" placeholder="788417769" required></div>
+<label>Names on Mobile Money</label><input type="text" id="su_wname" required>
+<button class="btn" onclick="signUp()">Sign Up</button>
+<p id="suMsg" style="color:green"></p>
+</div>
+</div>
+
+<!-- USER DASHBOARD -->
+<div id="userDashboard" class="hidden container">
+<h2>Welcome, <span id="uName"></span></h2>
+<div class="card">
+<h3>Your Jada Card</h3>
+<div id="cardStatus">Admin has not issued your card yet</div>
+<div id="scratchArea" class="hidden">
+  <div class="scratch-card" id="scratchCard" onclick="revealCard()">TAP TO SCRATCH</div>
+  <p style="text-align:center">Total Winnings: <b id="totalWin">0 UGX</b></p>
+</div>
+</div>
+<div class="card">
+<h3>Withdraw Winnings</h3>
+<p>Available: <b id="availWin">0 UGX</b></p>
+<input type="number" id="withdrawAmount" placeholder="Enter amount">
+<button class="btn" onclick="setMaxWithdraw()">Withdraw Max</button>
+<button class="btn btn-success" onclick="requestWithdraw()">Request Withdraw</button>
+<p id="wMsg"></p>
+</div>
+<div class="card">
+<h3>Win/Lose History</h3>
+<div id="historyList">No history yet</div>
+</div>
+<button class="btn btn-danger" onclick="logout()">Logout</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="hidden container">
+<h2>Admin Panel</h2>
+<div id="adminLogin" class="form" style="max-width:400px">
+  <div class="admin-info">
+    <b>Admin: Lubinga Alosious</b><br>
+    <b>Phone: +256 788 417 769</b><br>
+    <b>Email: jadacard23@gmail.com</b>
+  </div>
+  <label>Admin Email</label><input type="email" id="adminEmail" value="jadacard23@gmail.com">
+  <label>Admin Phone</label><input type="tel" id="adminPhone" value="+256788417769" readonly>
+  <label>Admin Password</label><input type="password" id="adminPass" placeholder="Enter password">
+  <button class="btn" onclick="adminLogin()">Login</button>
+</div>
+<div id="adminDash" class="hidden">
+  <button class="btn" onclick="loadAdminData()">Refresh Users</button>
+  <button class="btn btn-success" onclick="loadWithdrawals()">View Withdrawals</button>
+  <h3 style="margin-top:20px">All Users</h3>
+  <div class="admin-table"><table id="adminTable"><thead><tr>
+    <th>User</th><th>Phone</th><th>Withdraw To</th><th>Status</th><th>Set Win Amount</th><th>Total Won</th><th>Action</th>
+  </tr></thead><tbody></tbody></table></div>
+  <h3 style="margin-top:20px">Withdrawal Requests</h3>
+  <div class="admin-table"><table id="withdrawTable"><thead><tr>
+    <th>Date</th><th>User Email</th><th>Amount</th><th>Withdraw To</th><th>MM Number</th><th>Status</th><th>Action</th>
+  </tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+
+<script>
+const SCRIPT_URL = "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE"; // <-- PUT YOUR DEPLOYED URL HERE
+const ADMIN_EMAIL = "jadacard23@gmail.com";
+const ADMIN_PHONE = "+256788417769";
+const ADMIN_PASS = "JadaAdmin2026"; // Change this
+let currentUser = null;
+
+async function apiCall(action, data = {}){
+  try{
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({action, ...data}),
+      headers: {'Content-Type': 'application/json'}
+    });
+    return await res.json();
+  }catch(err){
+    alert('Connection Error: ' + err.message);
+    return {error: err.message};
+  }
+}
+
+async function apiGet(params){
+  try{
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(SCRIPT_URL + '?' + query);
+    return await res.json();
+  }catch(err){
+    alert('Connection Error: ' + err.message);
+    return {error: err.message};
+  }
+}
+
+async function signUp(){
+  if(!su_name.value || !su_email.value || !su_pass.value){ alert('Fill all fields'); return; }
+  const res = await apiCall('signup', {
+    name:su_name.value, email:su_email.value, password:su_pass.value,
+    phone:'+256'+su_phone.value, wphone:'+256'+su_wphone.value, wname:su_wname.value
+  });
+  if(res.success) suMsg.innerText = 'Account created! Pay 2000 UGX to +256788417769 MTN or +256743830346 Airtel. Names: Lubinga Alosious';
+}
+
+async function userLogin(){
+  const res = await apiGet({action:'getUser', email:loginEmail.value, pass:loginPass.value});
+  if(res.error){ alert(res.error); return; }
+  currentUser = res;
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('userDashboard').classList.remove('hidden');
+  uName.innerText = currentUser.name;
+  totalWin.innerText = currentUser.total_won + ' UGX';
+  availWin.innerText = currentUser.total_won + ' UGX';
+  if(currentUser.status === 'Issued'){
+    cardStatus.innerText = 'Card Ready!';
+    scratchArea.classList.remove('hidden');
+  }
+  loadHistory();
+}
+
+async function revealCard(){
+  if(scratchCard.classList.contains('revealed')) return;
+  scratchCard.classList.add('revealed');
+  scratchCard.innerText = currentUser.win_amount + ' UGX';
+  const result = currentUser.win_amount > 0? 'WIN' : 'LOSE';
+  await apiCall('recordWin', {id:currentUser.id, amount:currentUser.win_amount, result:result});
+  alert('You '+result+' '+currentUser.win_amount+' UGX');
+  userLogin();
+}
+
+async function requestWithdraw(){
+  const amount = parseInt(withdrawAmount.value);
+  if(amount > currentUser.total_won){ alert('Not enough balance'); return; }
+  if(amount <= 0){ alert('Enter valid amount'); return; }
+  await apiCall('withdraw', {id:currentUser.id, amount:amount, wphone:currentUser.wphone, wname:currentUser.wname, email:currentUser.email});
+  wMsg.innerText = 'Withdrawal request sent to Admin: Lubinga Alosious';
+  withdrawAmount.value = '';
+}
+
+function setMaxWithdraw(){ withdrawAmount.value = currentUser.total_won; }
+function showAdmin(){ document.getElementById('loginPage').classList.add('hidden'); document.getElementById('adminPanel').classList.remove('hidden'); }
+function adminLogin(){
+  if(adminEmail.value===ADMIN_EMAIL && adminPhone.value===ADMIN_PHONE && adminPass.value===ADMIN_PASS){
+    document.getElementById('adminLogin').style.display='none'; adminDash.classList.remove('hidden'); loadAdminData();
+  } else alert('Wrong Admin details')
+}
+async function loadAdminData(){
+  adminTable.querySelector('tbody').innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
+  const users = await apiGet({action:'getAll'});
+  adminTable.querySelector('tbody').innerHTML = '';
+  users.reverse().forEach(u=>{
+    adminTable.querySelector('tbody').innerHTML += `<tr>
+      <td>${u.name}<br>${u.email}</td>
+      <td>${u.phone}</td>
+      <td>${u.wname}<br>${u.wphone}</td>
+      <td class="${u.status==='Pending'?'status-pending':'status-issued'}">${u.status}</td>
+      <td><input type="number" id="win${u.id}" value="${u.win_amount}" style="width:90px"> UGX</td>
+      <td>${u.total_won} UGX</td>
+      <td>
+        ${u.status==='Pending'?`<button class="btn btn-success" onclick="issueCard(${u.id})">Issue Card</button><br>`:''}
+        <button class="btn" onclick="setWin(${u.id})">Save Amount</button>
+      </td>
+    </tr>`;
+  });
+}
+async function issueCard(id){ await apiCall('issue',{id:id}); alert('Card Issued'); loadAdminData(); }
+async function setWin(id){ const amount = document.getElementById('win'+id).value; await apiCall('setWin',{id:id,amount:amount}); alert('Amount Saved'); loadAdminData(); }
+function logout(){ location.reload(); }
+function showLogin(){ document.getElementById('adminPanel').classList.add('hidden'); document.getElementById('userDashboard').classList.add('hidden'); document.getElementById('loginPage').classList.remove('hidden'); }
+async function loadHistory(){ 
+  const history = await apiGet({action:'getHistory', id:currentUser.id}); 
+  historyList.innerHTML = history.length? history.map(h=>`<div class="history-item"><span>${h.date}</span><span>${h.result}: ${h.amount} UGX</span></div>`).join('') : 'No history yet'; 
+}
+
+async function loadWithdrawals(){
+  withdrawTable.querySelector('tbody').innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
+  const withdrawals = await apiGet({action:'getWithdrawals'});
+  const tbody = withdrawTable.querySelector('tbody');
+  tbody.innerHTML = '';
+  if(withdrawals.length === 0){
+    tbody.innerHTML = '<tr><td colspan="7">No pending withdrawals</td></tr>';
+    return;
+  }
+  withdrawals.forEach(w=>{
+    tbody.innerHTML += `<tr>
+      <td>${w.date}</td>
+      <td>${w.email}</td>
+      <td><b>${w.amount} UGX</b></td>
+      <td>${w.wname}</td>
+      <td>${w.wphone}</td>
+      <td class="${w.status==='Pending'?'status-pending':'status-issued'}">${w.status}</td>
+      <td>${w.status==='Pending'?`<button class="btn btn-success" onclick="markPaid(${w.id})">Mark as Paid</button>`:''}</td>
+    </tr>`;
+  });
+}
+async function markPaid(id){
+  if(!confirm('Confirm you have sent this money?')) return;
+  await apiCall('markPaid',{id:id}); 
+  alert('Marked as Paid. User will be notified.'); 
+  loadWithdrawals();
+}
+</script>
+</body>
+</html>
+
 
